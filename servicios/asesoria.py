@@ -1,4 +1,5 @@
 from servicios.servicio import Servicio
+from excepciones.excepciones import ServicioError
 
 class ServicioAsesoria(Servicio):#sub clase de servicios que maneja las asesorías
 
@@ -16,4 +17,4 @@ class ServicioAsesoria(Servicio):#sub clase de servicios que maneja las asesorí
             if t["id"] == id_tema:#realiza una busqueda del tema por su ID en la lista de temas disponibles
                 return t["precio_hora"] * horas#calcula el costo de una asesoría, buscando el tema por su ID y multiplicando su precio por hora por la cantidad de horas solicitadas
 
-        raise ValueError("Tema no existe")#si no se encuentra el tema por su ID, se lanza un error indicando que el tema no existe
+        raise ServicioError("Tema no existe")#si no se encuentra el tema por su ID, se lanza un error indicando que el tema no existe

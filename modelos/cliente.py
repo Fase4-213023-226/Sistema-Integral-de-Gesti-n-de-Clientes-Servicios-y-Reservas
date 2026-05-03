@@ -1,4 +1,6 @@
 from modelos.entidad_base import EntidadBase
+from excepciones.excepciones import ClienteError
+from utils.logger import logger
 
 class Cliente(EntidadBase):
     # Valores del constructor para inicializar los atributos del cliente
@@ -19,20 +21,28 @@ class Cliente(EntidadBase):
     
     # Método que valida si los datos del cliente son correctos
     def validar_datos(self):
-        if not str(self.__id_cliente).strip():
-            raise ValueError("El ID del cliente no puede estar vacio.")
+        try:
+            if not str(self.__id_cliente).strip():
+                raise ClienteError("El ID del cliente no puede estar vacio.")
 
-        if not self.__nombre.strip():
-            raise ValueError("El nombre del cliente no puede estar vacio.")
+            if not self.__nombre.strip():
+                raise ClienteError("El nombre del cliente no puede estar vacio.")
 
-        if "@" not in self.__correo_electronico:
-            raise ValueError("Correo electrónico es inválido.")
+            if "@" not in self.__correo_electronico:
+                raise ClienteError("Correo electrónico es inválido.")
 
-        if not self.__telefono.isdigit():
-            raise ValueError("El teléfono solo puede contener números.")
+            if not self.__telefono.isdigit():
+                raise ClienteError("El teléfono solo puede contener números.")
 
-        if len(self.__telefono) < 10 or len(self.__telefono) > 15:
-            raise ValueError("El teléfono debe tener solo entre 10 y 15 dígitos.")
+            if len(self.__telefono) < 10 or len(self.__telefono) > 15:
+                raise ClienteError("El teléfono debe tener solo entre 10 y 15 dígitos.")
+            
+            return True
+
+        # Si ocurre un error en el proceso de validación, se registra el error en el log y lanza una excepción
+        except ClienteError as e:
+            logger.error(f"Error de validación de datos del cliente {self.__nombre} con número {self.__id_cliente}: {e}")
+            raise
     
     # Métodos para acceder a los atributos del cliente de forma segura
     @property

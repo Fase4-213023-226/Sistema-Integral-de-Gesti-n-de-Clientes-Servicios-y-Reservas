@@ -1,6 +1,7 @@
 
 from servicios.servicio import Servicio
 from datetime import datetime, timedelta #sirve para importar las clases necesarias para gestionar fechas, horas y realizar cálculos temporales.
+from excepciones.excepciones import ServicioError
 
 class ServicioAlquilerEquipos(Servicio): #sub calse de servicios que maneja el alquiler de los equipos
 
@@ -25,7 +26,7 @@ class ServicioAlquilerEquipos(Servicio): #sub calse de servicios que maneja el a
                     usadas = self.alquileres.get((id_equipo, dia), 0)#consulta cuantos equipos ya están alquilados para ese día
 
                     if usadas + cantidad > e["unidades"]:#verifica si hay unidades disponibles 
-                        raise ValueError("No disponible")#si la cantidad solicitada más las unidades ya alquiladas excede el total de unidades disponibles, se lanza un error indicando que no hay disponibilidad
+                        raise ServicioError("No disponible")#si la cantidad solicitada más las unidades ya alquiladas excede el total de unidades disponibles, se lanza un error indicando que no hay disponibilidad
 
                 for i in range(dias):#guarda el alquiler dia por dia
                     dia = (inicio + timedelta(days=i)).strftime("%Y-%m-%d")
@@ -33,4 +34,4 @@ class ServicioAlquilerEquipos(Servicio): #sub calse de servicios que maneja el a
 
                 return e["precio_dia"] * dias * cantidad#calcula el costo total del alquiler multiplicando el precio por día del equipo, por la cantidad de días y por la cantidad de unidades alquiladas
 
-        raise ValueError("Equipo no existe")#si no se encuentra el equipo por su ID, se lanza un error indicando que el equipo no existe
+        raise ServicioError("Equipo no existe")#si no se encuentra el equipo por su ID, se lanza un error indicando que el equipo no existe

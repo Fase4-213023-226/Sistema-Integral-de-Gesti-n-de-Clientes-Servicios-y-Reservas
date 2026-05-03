@@ -1,4 +1,5 @@
 from servicios.servicio import Servicio
+from excepciones.excepciones import ServicioError
 
 class ServicioReservaSalas(Servicio): #ServicioReservaSalas es una subclase que hereda todas las propiedades y métodos de la clase Servicio
                                       # # Esta clase maneja las reservas de salas
@@ -17,10 +18,10 @@ class ServicioReservaSalas(Servicio): #ServicioReservaSalas es una subclase que 
             if s["id"] == id_sala: # realiza una busqueda de la sala por su id
 
                 if (id_sala, fecha) in self.ocupadas: # verifica si la sala esta disponible para esas fechas 
-                    raise ValueError("Sala ocupada")
+                    raise ServicioError("Sala ocupada")
 
                 costo = s["precio_hora"] * horas  # Calcula el costo (precio por hora * horas)
                 self.ocupadas.add((id_sala, fecha))  # Guarda la reserva como ocupada
                 return costo  # Devuelve el costo total
 
-        raise ValueError("Sala no existe")
+        raise ServicioError("Sala no existe")
