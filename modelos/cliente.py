@@ -20,7 +20,7 @@ class Cliente(EntidadBase):
         return (
             f"ID Cliente: {self.__id_cliente}\n"
             f"Nombre: {self.__nombre}\n"
-            f"Correo Electrónico: {self.__correo_electronico}\n"
+            f"Correo Electronico: {self.__correo_electronico}\n"
             f"Telefono: {self.__telefono}"
         )
     
@@ -34,19 +34,19 @@ class Cliente(EntidadBase):
                 raise ClienteError("El nombre del cliente no puede estar vacio.")
 
             if "@" not in self.__correo_electronico:
-                raise ClienteError("Correo electrónico es inválido.")
+                raise ClienteError("Correo electronico es invalido.")
 
             if not self.__telefono.isdigit():
                 raise ClienteError("El telefono solo puede contener números.")
 
             if len(self.__telefono) < 10 or len(self.__telefono) > 15:
-                raise ClienteError("El telefono debe tener solo entre 10 y 15 dígitos.")
+                raise ClienteError("El telefono debe tener solo entre 10 y 15 digitos.")
             
             return True
 
         # Si ocurre un error en el proceso de validación, se registra el error en el log y lanza una excepción
         except ClienteError as e:
-            logger.error(f"Error de validación de datos del cliente {self.__nombre} con número {self.__id_cliente}: {e}")
+            logger.error(f"Error de validacion de datos del cliente {self.__nombre} con número {self.__id_cliente}: {e}")
             raise
     
     # Métodos para acceder a los atributos del cliente de forma segura
