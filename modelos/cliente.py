@@ -9,6 +9,11 @@ class Cliente(EntidadBase):
         self.__nombre = nombre
         self.__correo_electronico = correo_electronico
         self.__telefono = telefono
+        self.validar_datos()
+
+    # Método para representar el cliente como una cadena de texto legible para las pruebas
+    def __str__(self):
+        return f"Cliente con ID: {self.__id_cliente} y Nombre: {self.__nombre} fue creado exitosamente."
 
     # Modelo de información del cliente
     def mostrar_info(self):
@@ -16,7 +21,7 @@ class Cliente(EntidadBase):
             f"ID Cliente: {self.__id_cliente}\n"
             f"Nombre: {self.__nombre}\n"
             f"Correo Electrónico: {self.__correo_electronico}\n"
-            f"Teléfono: {self.__telefono}"
+            f"Telefono: {self.__telefono}"
         )
     
     # Método que valida si los datos del cliente son correctos
@@ -32,10 +37,10 @@ class Cliente(EntidadBase):
                 raise ClienteError("Correo electrónico es inválido.")
 
             if not self.__telefono.isdigit():
-                raise ClienteError("El teléfono solo puede contener números.")
+                raise ClienteError("El telefono solo puede contener números.")
 
             if len(self.__telefono) < 10 or len(self.__telefono) > 15:
-                raise ClienteError("El teléfono debe tener solo entre 10 y 15 dígitos.")
+                raise ClienteError("El telefono debe tener solo entre 10 y 15 dígitos.")
             
             return True
 
