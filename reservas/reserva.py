@@ -5,6 +5,7 @@ class ReservaError(Exception): #Excepcion para manejo de errores de reserva mien
     pass
 
 
+
 class Reserva: #Clase que representa y se encarga de gestionar la reserva en el sistema 
     
 
