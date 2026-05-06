@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta #Importa la herramienta para manejar fechas, horas y calculos de duración
+from modelos.entidad_base import EntidadBase
+from excepciones.excepciones import ReservaError
+import logging
+
+#class ReservaError(Exception): #Excepcion para manejo de errores de reserva mientras se implementa el archivo Excepciones
+#    pass
+
+logger = logging.getLogger(__name__)
 
 
-class ReservaError(Exception): #Excepcion para manejo de errores de reserva mientras se implementa el archivo Excepciones
-    pass
-
-
-
-class Reserva: #Clase que representa y se encarga de gestionar la reserva en el sistema 
+class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la reserva en el sistema 
     
 
     # Lista global compartida por todas las reservas para simular almacenamiento de reservas activas
@@ -14,12 +17,30 @@ class Reserva: #Clase que representa y se encarga de gestionar la reserva en el 
 
     # Constructor, Inicializa una nueva reserva con sus datos principales
     def __init__(self, id_reserva, cliente, servicio, fecha_hora_inicio, duracion_horas):
-        self.__id_reserva = id_reserva                  # Identificador único de la reserva
-        self.__cliente = cliente                        # Objeto cliente asociado
-        self.__servicio = servicio                      # Objeto servicio asociado
-        self.__fecha_hora_inicio = fecha_hora_inicio    # Fecha y hora de inicio
-        self.__duracion_horas = duracion_horas          # Duración en horas
-        self.__estado = "Pendiente"                     # Estado inicial de la reserva
+        try:
+            super().__init__(id_reserva)
+
+            if cliente is None:
+                raise ReservaError("El cliente no puede ser nulo")
+            
+            if not isinstance(fecha_hora_inicio, datetime) or not isinstance(duracion_horas, datetime):
+                raise ReservaError("Las fechas deben de ser de tipo fecha  ")
+            
+            self.__id_reserva = id_reserva                  # Identificador único de la reserva
+            self.__cliente = cliente                        # Objeto cliente asociado
+            self.__servicio = servicio                      # Objeto servicio asociado
+            self.__fecha_hora_inicio = fecha_hora_inicio    # Fecha y hora de inicio
+            self.__duracion_horas = duracion_horas          # Duración en horas
+            self.servicios_contratados = []
+            self.__estado = "Pendiente"                     # Estado inicial de la reserva
+            
+
+            logger.info(f"Reserva creada ID: {id_reserva} para el cliente: {cliente.nombre}")
+
+        except Exception as e:
+            logger.error(f"Error al crear reserva: {str(e)}")
+            raise ReservaError(f"Error al inicializar la reserva: {str(e)}")
+        
 
     # Método para mostrar información de la reserva
     def mostrar_info(self):
@@ -35,70 +56,157 @@ class Reserva: #Clase que representa y se encarga de gestionar la reserva en el 
             f"Duración: {self.__duracion_horas} hora(s)\n"
             f"Estado: {self.__estado}"
         )
+    
+    def procesar_reserva(self, servicio, **kwargs):
+        try:
+            costo = servicio.calcular_costo(**kwargs)
+
+            registro = {
+                "servicio": servicio,
+                "costo": costo,
+                "detalles": kwargs
+            }
+
+            self.servicios_contratados.append(registro)
+            logger.info(f"Servicio {type(servicio).__name__} añadido a reserva {self.id_reserva}")
+
+        except Exception as e:
+            logger.critical(f"Error crítico en reserva {self.id_reserva}: {str(e)}")
+            raise ReservaError("Error interno al procesar la reserva.")
+        
 
     # Validación de datos de reserva
     def validar_reserva(self): #Verifica que todos los datos ingresados sean correctos
-        if not str(self.__id_reserva).strip(): ## El ID no puede estar vacío
-            raise ReservaError("El ID de la reserva no puede estar vacío.")
+        try:
+            if not str(self.id_reserva).strip():
+                raise ReservaError("El ID de la reserva no puede estar vacío.")
 
-        if self.__cliente is None or not hasattr(self.__cliente, "nombre"): #Verifica que exista cliente y que tenga atributo nombre
-            raise ReservaError("La reserva debe tener un cliente válido.")
+            if self.cliente is None or not hasattr(self.cliente, "nombre"):
+                raise ReservaError("La reserva debe tener un cliente válido.")
 
-        if self.__servicio is None or not hasattr(self.__servicio, "describir"): #Verifica que exista servicio y tenga método describir
-            raise ReservaError("La reserva debe tener un servicio válido.")
+            if not isinstance(self.fecha_hora_inicio, datetime) or not isinstance(self.fecha_fin, datetime):
+                raise ReservaError("Las fechas deben ser válidas.")
 
-        if not isinstance(self.__fecha_hora_inicio, datetime): #Valida que la fecha sea un objeto datetime
-            raise ReservaError("La fecha y hora de inicio no son válidas.")
+            if self.fecha_fin <= self.fecha_hora_inicio:
+                raise ReservaError("La fecha de fin debe ser posterior a la de inicio.")
 
-        if self.__duracion_horas <= 0: #La duración debe ser mayor que cero
-            raise ReservaError("La duración debe ser mayor a cero.")
+        except ReservaError as e:
+            logger.warning(f"Validación general fallida en reserva {self.id_reserva}: {str(e)}")
+            raise
+
+        except Exception as e:
+            logger.error(f"Error inesperado en validación general: {str(e)}")
+            raise ReservaError("Error en validación de la reserva.")
 
     # Validar conflictos con otras reservas
     def validar_conflicto(self): #Comprueba si ya existe otra reserva en el mismo horario para el mismo servicio
-        nueva_inicio = self.__fecha_hora_inicio #Define inicio y fin de la nueva reserva
-        nueva_fin = nueva_inicio + timedelta(hours=self.__duracion_horas) 
+        try:
+            if not self.fecha_hora_inicio or not self.fecha_fin:
+                raise ReservaError("Las fechas no pueden estar vacías.")
 
-        for reserva in Reserva.reservas_registradas: ##Recorre todas las reservas registradas
-            if reserva.servicio == self.__servicio and reserva.estado != "Cancelada": #Compara reservas del mismo servicio y que no estén canceladas
+            if self.fecha_fin <= self.fecha_hora_inicio:
+                raise ReservaError("La fecha de fin debe ser posterior a la de inicio.")
 
-                existente_inicio = reserva.fecha_hora_inicio #Obtiene horario de reserva existente
-                existente_fin = existente_inicio + timedelta(hours=reserva.duracion_horas)
+                # Validación de conflicto con otras reservas
+            for reserva in Reserva.reservas_registradas:
+                if reserva is self or reserva.estado == "CANCELADA":
+                    continue
 
-                # Valida cruce de horarios
-                if nueva_inicio < existente_fin and nueva_fin > existente_inicio:
+                if (
+                    self.fecha_hora_inicio < reserva.fecha_fin and
+                    self.fecha_fin > reserva.fecha_hora_inicio):
                     raise ReservaError(
-                        f"Conflicto detectado: El servicio '{self.__servicio.nombre_servicio}' "
-                        f"ya está reservado en ese horario."
-                    )
+                        f"Conflicto con otra reserva (ID: {reserva.id_reserva})")
+            
+        except ReservaError as e:
+            logger.warning(f"Validación fallida en reserva {self.id_reserva}: {str(e)}")
+            raise
+
+        except Exception as e:
+            logger.error(f"Error inesperado en validación: {str(e)}")
+            raise ReservaError("Error al validar la reserva.")            
+
 
     # Confirmar reserva
     def confirmar(self): #Valida y registra oficialmente la reserva
-        self.validar_reserva() #Verifica datos correctos
-        self.validar_conflicto() #Verifica disponibilidad
+        try:
+            self.validar_reserva() #Verifica datos correctos
 
-        self.__estado = "Confirmada" #Cambia estado a confirmada
+            self.validar_conflicto() #Verifica disponibilidad
+            if not self.servicios_contratados:
+                raise ReservaError("No se puede confirmar una reserva sin servicios.")
 
-        Reserva.reservas_registradas.append(self) #Guarda en lista global
+            self.estado = "CONFIRMADA" #Cambia estado a confirmada
+            Reserva.reservas_registradas.append(self) #Guarda en lista global
 
-        return f"Reserva {self.__id_reserva} confirmada exitosamente."
+            logger.info(f"Reserva {self.id_reserva} CONFIRMADA exitosamente.")
+
+        except ReservaError as e:
+            logger.error(f"Error al confirmar reserva {self.id_reserva}: {str(e)}")
+            raise
+        
 
     # Cancelar reserva
     def cancelar(self): # Cambia el estado de una reserva a cancelada
+        try:
+            if self.estado == "COMPLETADA": #Evita cancelar dos veces
+                raise ReservaError("No se puede cancelar una reserva ya finalizada.")
 
-        if self.__estado == "Cancelada": #Evita cancelar dos veces
-            raise ReservaError("La reserva ya fue cancelada.")
+            self.estado = "CANCELADA" #Actualiza estado
 
-        self.__estado = "Cancelada" #Actualiza estado
-        return f"Reserva {self.__id_reserva} cancelada correctamente."
+            logger.info(f"Reserva {self.id_reserva} CANCELADA.")
+
+        except ReservaError as e:
+            logger.warning(f"Cancelación inválida {self.id_reserva}: {str(e)}")
+            raise
+
 
     # Procesar reserva
     def procesar(self): #Marca una reserva como completada
+        try:
+            if self.estado != "CONFIRMADA": #Solo reservas confirmadas pueden procesarse
+                raise ReservaError("Solo se pueden completar reservas confirmadas.")
 
-        if self.__estado != "Confirmada": #Solo reservas confirmadas pueden procesarse
-            raise ReservaError("Solo se pueden procesar reservas confirmadas.")
+            self.estado = "COMPLETADA" #Actualiza estado
 
-        self.__estado = "Procesada" #Actualiza estado
-        return f"Reserva {self.__id_reserva} procesada exitosamente."
+            logger.info(f"Reserva {self.id_reserva} COMPLETADA.")
+
+        except ReservaError as e:
+            logger.error(f"Error al completar reserva {self.id_reserva}: {str(e)}")
+            raise
+
+    def obtener_total(self):
+        try:
+            return sum(s["costo"] for s in self.servicios_contratados)
+
+        except Exception as e:
+            logger.error(f"Error calculando total en reserva {self.id_reserva}: {str(e)}")
+            raise ReservaError("Error al calcular el total.")
+        
+    def mostrar(self):
+        try:
+            resumen = f"\n--- DETALLE DE RESERVA {self.id_reserva} ---\n"
+            resumen += f"Cliente: {self.cliente.nombre} | Estado: {self.estado}\n"
+            resumen += "Servicios:\n"
+
+            for s in self.servicios_contratados:
+                resumen += f" > {s['servicio'].describir()} -> subtotal: ${s['costo']}\n"
+
+            resumen += f"TOTAL FINAL: ${self.obtener_total()}\n"
+            return resumen
+
+        except Exception as e:
+            logger.error(f"Error mostrando reserva {self.id_reserva}: {str(e)}")
+            return "Error al mostrar la información."
+
+    def __str__(self):
+        try:
+            return (
+                f"Reserva {self.id_reserva} [{self.estado}] - "
+                f"Cliente: {self.cliente.nombre} - Total: ${self.obtener_total()}"
+            )
+        except Exception:
+            return f"Reserva {self.id_reserva} [ERROR AL MOSTRAR]"
 
     # Simulación de operación
     @staticmethod
