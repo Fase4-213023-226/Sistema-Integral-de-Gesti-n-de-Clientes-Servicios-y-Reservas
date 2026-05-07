@@ -23,4 +23,4 @@ class ServicioAsesoria(Servicio):#sub clase de servicios que maneja las asesorí
 
         except ServicioError as e:  # captura el error personalizado
             logger.error(e)  # guarda el error en el archivo de logs
-            return None  # evita que el programa se rompa
+            raise  # evita que el programa se rompa

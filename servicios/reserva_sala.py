@@ -30,4 +30,4 @@ class ServicioReservaSalas(Servicio): #ServicioReservaSalas es una subclase que 
 
         except ServicioError as e:  # captura el error
             logger.error(e)  # lo guarda en el log
-            return None  # evita que el programa falle
+            raise # evita que el programa falle

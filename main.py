@@ -63,11 +63,16 @@ def simular_operaciones():
     for i, operacion in enumerate(operaciones, 1):
         try:
             resultado = operacion()
-            logger.info(f"Operacion {i} fue exitosa: {resultado}") # Registro de éxito en el log
-            print(f"Operacion {i} fue exitosa: {resultado}") # Impresión del resultado de la operación
+
+            # Registro e impresión de operaciones exitosas
+            logger.info(f"Operacion {i} fue exitosa: {resultado}")
+            print(f"Operacion {i} fue exitosa: {resultado}")
+
         except Exception as e:
-            logger.error(f"Operacion {i} ha fallado: {e}") # Registro del error en el log
-            print(f"Operacion {i} ha fallado: {e}") # Impresión del error ocurrido durante la operación
+
+            # Registro e impresión de operaciones fallidas
+            logger.error(f"Operacion {i} ha fallado: {e}")
+            print(f"Operacion {i} ha fallado: {e}")
 
     print("\n========= FIN DE SIMULACION DE OPERACIONES =========")
 

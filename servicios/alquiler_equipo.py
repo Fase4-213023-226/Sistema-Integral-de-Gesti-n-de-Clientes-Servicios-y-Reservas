@@ -40,4 +40,4 @@ class ServicioAlquilerEquipos(Servicio): #sub calse de servicios que maneja el a
 
         except ServicioError as e:  # captura el error
             logger.error(e)  # lo guarda en el archivo de logs
-            return None  # evita que el programa se detenga
+            raise  # evita que el programa se detenga
