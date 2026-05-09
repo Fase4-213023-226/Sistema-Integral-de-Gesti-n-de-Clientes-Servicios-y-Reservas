@@ -34,25 +34,46 @@ class ServicioReservaSalas(Servicio): #ServicioReservaSalas es una subclase que 
             if not isinstance(horas, (int, float)) or horas <= 0:
                 raise ErrorValidacion("La cantidad de horas debe ser mayor que cero.") # verifica que la cantidad de horas sea un número positivo
 
+            sala_encontrada = None
             for s in self.salas:
-                if s["id"] == id_sala: # realiza una busqueda de la sala por su id
+                if s["id"] == id_sala:
+                    sala_encontrada = s
+                    break
 
-                    if (id_sala, fecha) in self.ocupadas: # verifica si la sala esta disponible para esas fechas 
-                        raise ErrorAutorizacion("Sala ocupada")  # lanza error si ya está ocupada
+            if sala_encontrada is None:
+                raise ErrorServicioNoDisponible("Sala no existe")
 
-                    if "precio_hora" not in s:
-                        raise ErrorCalculo("La sala no tiene precio por hora configurado.")
+        # Si ocurre un error en el proceso de validación, se registra el error en el log y lanza una excepción
+        except (ErrorParametroFaltante, ErrorValidacion):
+            logger.error("Parametro o validacion invalida para sala %s en fecha %s", id_sala, fecha, exc_info=True)
+            raise
+        except ErrorServicioNoDisponible:
+            logger.error("Sala %s no disponible", id_sala, exc_info=True)
+            raise
+        except Exception as e:
+            logger.error("Error inesperado validando sala %s: %s", id_sala, str(e), exc_info=True)
+            raise ErrorCalculo("No se pudo validar la sala.") from e
+        else:
+            try:
+                if (id_sala, fecha) in self.ocupadas:
+                    raise ErrorAutorizacion("Sala ocupada") # verifica si la sala ya está ocupada en la fecha solicitada
 
-                    costo = s["precio_hora"] * horas  # Calcula el costo (precio por hora * horas)
-                    self.ocupadas.add((id_sala, fecha))  # Guarda la reserva como ocupada
-                    return costo  # Devuelve el costo total
+                if "precio_hora" not in sala_encontrada:
+                    raise ErrorCalculo("La sala no tiene precio por hora configurado.") # verifica que la sala tenga un precio por hora configurado
+                
+                # Si todo es correcto, calcula el costo multiplicando el precio por hora de la sala por la cantidad de horas solicitadas
+                costo = sala_encontrada["precio_hora"] * horas
+                self.ocupadas.add((id_sala, fecha)) # marca la sala como ocupada para esa fecha
+                logger.info("Costo calculado para sala %s: $%s", id_sala, costo)
+                return costo
 
-            raise ErrorServicioNoDisponible("Sala no existe")  # si no encuentra la sala
-
-        except (ErrorParametroFaltante, ErrorValidacion, ErrorAutorizacion, ErrorServicioNoDisponible, ErrorCalculo) as e: # captura el error
-            logger.error("Error calculando costo de sala %s en fecha %s: %s", id_sala, fecha, e, exc_info=True) # lo guarda en el log
-            raise # evita que el programa falle
-
-        except Exception as e: # captura cualquier error inesperado
-            logger.error("Error inesperado calculando costo de sala %s: %s", id_sala, e, exc_info=True)
-            raise ErrorCalculo("No se pudo calcular el costo de la sala.") from e
+            # Si ocurre un error en el proceso de reserva, se registra el error en el log relacionado a la sala
+            except ErrorAutorizacion:
+                logger.warning("Intento de reservar sala ocupada %s en fecha %s", id_sala, fecha, exc_info=True)
+                raise
+            except ErrorCalculo:
+                logger.error("Error de calculo para sala %s", id_sala, exc_info=True)
+                raise
+            except Exception as e:
+                logger.error("Error inesperado calculando costo de sala %s: %s", id_sala, str(e), exc_info=True)
+                raise ErrorCalculo("No se pudo calcular el costo de la sala.") from e
