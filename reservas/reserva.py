@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta #Importa la herramienta para manejar fechas, horas y calculos de duración
 from modelos.entidad_base import EntidadBase
-from excepciones.excepciones import ReservaError
+from excepciones.excepciones import ErrorReserva
 import logging
 
 #class ReservaError(Exception): #Excepcion para manejo de errores de reserva mientras se implementa el archivo Excepciones
@@ -21,10 +21,10 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
             super().__init__(id_reserva)
 
             if cliente is None:
-                raise ReservaError("El cliente no puede ser nulo")
+                raise ErrorReserva("El cliente no puede ser nulo")
             
             if not isinstance(fecha_hora_inicio, datetime) or not isinstance(duracion_horas, datetime):
-                raise ReservaError("Las fechas deben de ser de tipo fecha  ")
+                raise ErrorReserva("Las fechas deben de ser de tipo fecha  ")
             
             self.__id_reserva = id_reserva                  # Identificador único de la reserva
             self.__cliente = cliente                        # Objeto cliente asociado
@@ -39,7 +39,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
 
         except Exception as e:
             logger.error(f"Error al crear reserva: {str(e)}")
-            raise ReservaError(f"Error al inicializar la reserva: {str(e)}")
+            raise ErrorReserva(f"Error al inicializar la reserva: {str(e)}")
         
 
     # Método para mostrar información de la reserva
@@ -72,40 +72,40 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
 
         except Exception as e:
             logger.critical(f"Error crítico en reserva {self.id_reserva}: {str(e)}")
-            raise ReservaError("Error interno al procesar la reserva.")
+            raise ErrorReserva("Error interno al procesar la reserva.")
         
 
     # Validación de datos de reserva
     def validar_reserva(self): #Verifica que todos los datos ingresados sean correctos
         try:
             if not str(self.id_reserva).strip():
-                raise ReservaError("El ID de la reserva no puede estar vacío.")
+                raise ErrorReserva("El ID de la reserva no puede estar vacío.")
 
             if self.cliente is None or not hasattr(self.cliente, "nombre"):
-                raise ReservaError("La reserva debe tener un cliente válido.")
+                raise ErrorReserva("La reserva debe tener un cliente válido.")
 
             if not isinstance(self.fecha_hora_inicio, datetime) or not isinstance(self.fecha_fin, datetime):
-                raise ReservaError("Las fechas deben ser válidas.")
+                raise ErrorReserva("Las fechas deben ser válidas.")
 
             if self.fecha_fin <= self.fecha_hora_inicio:
-                raise ReservaError("La fecha de fin debe ser posterior a la de inicio.")
+                raise ErrorReserva("La fecha de fin debe ser posterior a la de inicio.")
 
-        except ReservaError as e:
+        except ErrorReserva as e:
             logger.warning(f"Validación general fallida en reserva {self.id_reserva}: {str(e)}")
             raise
 
         except Exception as e:
             logger.error(f"Error inesperado en validación general: {str(e)}")
-            raise ReservaError("Error en validación de la reserva.")
+            raise ErrorReserva("Error en validación de la reserva.")
 
     # Validar conflictos con otras reservas
     def validar_conflicto(self): #Comprueba si ya existe otra reserva en el mismo horario para el mismo servicio
         try:
             if not self.fecha_hora_inicio or not self.fecha_fin:
-                raise ReservaError("Las fechas no pueden estar vacías.")
+                raise ErrorReserva("Las fechas no pueden estar vacías.")
 
             if self.fecha_fin <= self.fecha_hora_inicio:
-                raise ReservaError("La fecha de fin debe ser posterior a la de inicio.")
+                raise ErrorReserva("La fecha de fin debe ser posterior a la de inicio.")
 
                 # Validación de conflicto con otras reservas
             for reserva in Reserva.reservas_registradas:
@@ -115,16 +115,16 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
                 if (
                     self.fecha_hora_inicio < reserva.fecha_fin and
                     self.fecha_fin > reserva.fecha_hora_inicio):
-                    raise ReservaError(
+                    raise ErrorReserva(
                         f"Conflicto con otra reserva (ID: {reserva.id_reserva})")
             
-        except ReservaError as e:
+        except ErrorReserva as e:
             logger.warning(f"Validación fallida en reserva {self.id_reserva}: {str(e)}")
             raise
 
         except Exception as e:
             logger.error(f"Error inesperado en validación: {str(e)}")
-            raise ReservaError("Error al validar la reserva.")            
+            raise ErrorReserva("Error al validar la reserva.")            
 
 
     # Confirmar reserva
@@ -134,14 +134,14 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
 
             self.validar_conflicto() #Verifica disponibilidad
             if not self.servicios_contratados:
-                raise ReservaError("No se puede confirmar una reserva sin servicios.")
+                raise ErrorReserva("No se puede confirmar una reserva sin servicios.")
 
             self.estado = "CONFIRMADA" #Cambia estado a confirmada
             Reserva.reservas_registradas.append(self) #Guarda en lista global
 
             logger.info(f"Reserva {self.id_reserva} CONFIRMADA exitosamente.")
 
-        except ReservaError as e:
+        except ErrorReserva as e:
             logger.error(f"Error al confirmar reserva {self.id_reserva}: {str(e)}")
             raise
         
@@ -150,13 +150,13 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     def cancelar(self): # Cambia el estado de una reserva a cancelada
         try:
             if self.estado == "COMPLETADA": #Evita cancelar dos veces
-                raise ReservaError("No se puede cancelar una reserva ya finalizada.")
+                raise ErrorReserva("No se puede cancelar una reserva ya finalizada.")
 
             self.estado = "CANCELADA" #Actualiza estado
 
             logger.info(f"Reserva {self.id_reserva} CANCELADA.")
 
-        except ReservaError as e:
+        except ErrorReserva as e:
             logger.warning(f"Cancelación inválida {self.id_reserva}: {str(e)}")
             raise
 
@@ -165,13 +165,13 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     def procesar(self): #Marca una reserva como completada
         try:
             if self.estado != "CONFIRMADA": #Solo reservas confirmadas pueden procesarse
-                raise ReservaError("Solo se pueden completar reservas confirmadas.")
+                raise ErrorReserva("Solo se pueden completar reservas confirmadas.")
 
             self.estado = "COMPLETADA" #Actualiza estado
 
             logger.info(f"Reserva {self.id_reserva} COMPLETADA.")
 
-        except ReservaError as e:
+        except ErrorReserva as e:
             logger.error(f"Error al completar reserva {self.id_reserva}: {str(e)}")
             raise
 
@@ -181,7 +181,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
 
         except Exception as e:
             logger.error(f"Error calculando total en reserva {self.id_reserva}: {str(e)}")
-            raise ReservaError("Error al calcular el total.")
+            raise ErrorReserva("Error al calcular el total.")
         
     def mostrar(self):
         try:

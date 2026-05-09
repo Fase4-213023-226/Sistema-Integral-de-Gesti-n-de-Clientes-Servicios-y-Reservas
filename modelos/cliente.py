@@ -1,15 +1,21 @@
 from modelos.entidad_base import EntidadBase
-from excepciones.excepciones import ClienteError
+from excepciones.excepciones import ErrorCliente, ErrorValidacion, ErrorParametroFaltante
 from utils.logger import logger
 
 class Cliente(EntidadBase):
     # Valores del constructor para inicializar los atributos del cliente
     def __init__(self, id_cliente, nombre, correo_electronico, telefono):
-        self.__id_cliente = id_cliente
-        self.__nombre = nombre
-        self.__correo_electronico = correo_electronico
-        self.__telefono = telefono
-        self.validar_datos()
+        try:
+            self.__id_cliente = id_cliente
+            self.__nombre = nombre
+            self.__correo_electronico = correo_electronico
+            self.__telefono = telefono
+            self.validar_datos()
+        except ErrorCliente:
+            raise
+        except Exception as e:
+            logger.error("Error inesperado creando cliente %s: %s", id_cliente, e, exc_info=True)
+            raise ErrorCliente("No se pudo crear el cliente.") from e
 
     # Método para representar el cliente como una cadena de texto legible para las pruebas
     def __str__(self):
@@ -27,27 +33,54 @@ class Cliente(EntidadBase):
     # Método que valida si los datos del cliente son correctos
     def validar_datos(self):
         try:
-            if not str(self.__id_cliente).strip():
-                raise ClienteError("El ID del cliente no puede estar vacio.")
+            if self.__id_cliente is None:
+                raise ErrorParametroFaltante("El ID del cliente es obligatorio.")
 
-            if not self.__nombre.strip():
-                raise ClienteError("El nombre del cliente no puede estar vacio.")
+            if not str(self.__id_cliente).strip():
+                raise ErrorValidacion("El ID del cliente no puede estar vacio.")
+
+            if self.__nombre is None:
+                raise ErrorParametroFaltante("El nombre del cliente es obligatorio.")
+
+            if not str(self.__nombre).strip():
+                raise ErrorValidacion("El nombre del cliente no puede estar vacio.")
+
+            if self.__correo_electronico is None:
+                raise ErrorParametroFaltante("El correo electronico es obligatorio.")
 
             if "@" not in self.__correo_electronico:
-                raise ClienteError("Correo electronico es invalido.")
+                raise ErrorValidacion("Correo electronico es invalido.")
 
-            if not self.__telefono.isdigit():
-                raise ClienteError("El telefono solo puede contener números.")
+            if self.__telefono is None:
+                raise ErrorParametroFaltante("El telefono es obligatorio.")
 
-            if len(self.__telefono) < 10 or len(self.__telefono) > 15:
-                raise ClienteError("El telefono debe tener solo entre 10 y 15 digitos.")
+            if not str(self.__telefono).isdigit():
+                raise ErrorValidacion("El telefono solo puede contener números.")
+
+            if len(str(self.__telefono)) < 10 or len(str(self.__telefono)) > 15:
+                raise ErrorValidacion("El telefono debe tener solo entre 10 y 15 digitos.")
             
             return True
 
         # Si ocurre un error en el proceso de validación, se registra el error en el log y lanza una excepción
-        except ClienteError as e:
-            logger.error(f"Error de validacion de datos del cliente {self.__nombre} con número {self.__id_cliente}: {e}")
+        except ErrorCliente:
+            logger.warning(
+                "Error de validacion de datos del cliente %s con numero %s",
+                self.__nombre,
+                self.__id_cliente,
+                exc_info=True,
+            )
             raise
+
+        except Exception as e:
+            logger.error(
+                "Error inesperado validando cliente %s con numero %s: %s",
+                self.__nombre,
+                self.__id_cliente,
+                e,
+                exc_info=True,
+            )
+            raise ErrorCliente("Error inesperado al validar el cliente.") from e
     
     # Métodos para acceder a los atributos del cliente de forma segura
     @property
