@@ -1,8 +1,11 @@
+from datetime import datetime, timedelta
 from servicios.reserva_sala import ServicioReservaSalas
 from servicios.alquiler_equipo import ServicioAlquilerEquipos
 from servicios.asesoria import ServicioAsesoria
 from modelos.cliente import Cliente
+from reservas.reserva import Reserva
 from excepciones.excepciones import ErrorDominio
+from excepciones.excepciones import ErrorReserva
 from utils.logger import logger
     
 def simular_operaciones():
@@ -32,6 +35,30 @@ def simular_operaciones():
         logger.critical("No se pudieron inicializar los servicios: %s", str(e), exc_info=True)
         print(f"ERROR CRÍTICO: No se pudieron inicializar los servicios")
         return
+    
+    cliente_reserva = Cliente(
+        10,
+        "Sebastian",
+        "sebastian@gmail.com",
+        "3001234567")
+
+    fecha_inicio = datetime.now()
+
+    reserva_prueba = Reserva(
+        1,
+        cliente_reserva,
+        servicio_asesoria,
+        fecha_inicio,
+        2)
+
+    reserva_conflicto = Reserva(
+        2,
+        cliente_reserva,
+        servicio_asesoria,
+        fecha_inicio + timedelta(minutes=30),
+        2)
+    
+
 
     operaciones = [
 
@@ -64,6 +91,24 @@ def simular_operaciones():
 
         # 10 inválido (Error: tema no existe)
         lambda: servicio_asesoria.calcular_costo(99, 2),
+        
+        # 11 válido - agregar servicio a reserva
+        lambda: reserva_prueba.procesar_reserva(servicio_asesoria, id_tema=1, horas=2),
+
+        # 12 válido - confirmar reserva
+        lambda: reserva_prueba.confirmar(),
+
+        # 13 válido - mostrar información
+        lambda: reserva_prueba.mostrar(),
+
+        # 14 inválido - conflicto de horario
+        lambda: reserva_conflicto.confirmar(),
+
+        # 15 válido - cancelar reserva
+        lambda: reserva_prueba.cancelar(),
+
+        # 16 inválido - procesar reserva cancelada
+        lambda: reserva_prueba.procesar(),
     ]
 
     # Loop para ejecutar las operaciones y mostrar resultados
