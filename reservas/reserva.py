@@ -18,7 +18,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     # Constructor, Inicializa una nueva reserva con sus datos principales
     def __init__(self, id_reserva, cliente, servicio, fecha_hora_inicio, duracion_horas):
         try:
-            super().__init__(id_reserva)
+            super().__init__()
 
             if cliente is None:
                 raise ErrorReserva("El cliente no puede ser nulo")
@@ -32,8 +32,6 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
             if not isinstance(duracion_horas, (int, float)):
                 raise ErrorReserva("La duración debe ser numérica")
             
-            if not isinstance(fecha_hora_inicio, datetime) or not isinstance(duracion_horas, datetime):
-                raise ErrorReserva("Las fechas deben de ser de tipo fecha  ")
             
             self.__id_reserva = id_reserva                  # Identificador único de la reserva
             self.__cliente = cliente                        # Objeto cliente asociado
@@ -99,7 +97,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
 
             fecha_fin = self.fecha_hora_inicio + timedelta(hours=self.duracion_horas)
 
-            if self.fecha_fin <= self.fecha_hora_inicio:
+            if fecha_fin <= self.fecha_hora_inicio:
                 raise ErrorReserva("La fecha de fin debe ser posterior a la de inicio.")
 
         except ErrorReserva as e:
@@ -162,7 +160,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
             if not self.servicios_contratados:
                 raise ErrorReserva("No se puede confirmar una reserva sin servicios.")
 
-            self.estado = "CONFIRMADA" #Cambia estado a confirmada
+            self.__estado = "CONFIRMADA" #Cambia estado a confirmada
             Reserva.reservas_registradas.append(self) #Guarda en lista global
 
             logger.info(f"Reserva {self.id_reserva} CONFIRMADA exitosamente.")
@@ -176,10 +174,10 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     # Cancelar reserva
     def cancelar(self): # Cambia el estado de una reserva a cancelada
         try:
-            if self.estado == "COMPLETADA": #Evita cancelar dos veces
+            if self.__estado == "COMPLETADA": #Evita cancelar dos veces
                 raise ErrorReserva("No se puede cancelar una reserva ya finalizada.")
 
-            self.estado = "CANCELADA" #Actualiza estado
+            self.__estado = "CANCELADA" #Actualiza estado
 
             logger.info(f"Reserva {self.id_reserva} CANCELADA.")
             return f"Reserva {self.id_reserva} cancelada correctamente."
@@ -192,10 +190,10 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     # Procesar reserva
     def procesar(self): #Marca una reserva como completada
         try:
-            if self.estado != "CONFIRMADA": #Solo reservas confirmadas pueden procesarse
+            if self.__estado != "CONFIRMADA": #Solo reservas confirmadas pueden procesarse
                 raise ErrorReserva("Solo se pueden completar reservas confirmadas.")
 
-            self.estado = "COMPLETADA" #Actualiza estado
+            self.__estado = "COMPLETADA" #Actualiza estado
 
             logger.info(f"Reserva {self.id_reserva} COMPLETADA.")
             return f"Reserva {self.id_reserva} completada correctamente."
@@ -215,7 +213,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     def mostrar(self):
         try:
             resumen = f"\n--- DETALLE DE RESERVA {self.id_reserva} ---\n"
-            resumen += f"Cliente: {self.cliente.nombre} | Estado: {self.estado}\n"
+            resumen += f"Cliente: {self.cliente.nombre} | Estado: {self.__estado}\n"
             resumen += "Servicios:\n"
 
             for s in self.servicios_contratados:
@@ -231,7 +229,7 @@ class Reserva(EntidadBase): #Clase que representa y se encarga de gestionar la r
     def __str__(self):
         try:
             return (
-                f"Reserva {self.id_reserva} [{self.estado}] - "
+                f"Reserva {self.id_reserva} [{self.__estado}] - "
                 f"Cliente: {self.cliente.nombre} - Total: ${self.obtener_total()}"
             )
         except Exception:
