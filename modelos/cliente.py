@@ -1,5 +1,5 @@
 from modelos.entidad_base import EntidadBase
-from excepciones.excepciones import ErrorCliente, ErrorValidacion, ErrorParametroFaltante
+from excepciones.excepciones import ErrorDominio, ErrorCliente, ErrorValidacion, ErrorParametroFaltante
 from utils.logger import logger
 
 class Cliente(EntidadBase):
@@ -11,7 +11,7 @@ class Cliente(EntidadBase):
             self.__correo_electronico = correo_electronico
             self.__telefono = telefono
             self.validar_datos()
-        except ErrorCliente:
+        except ErrorDominio:
             raise
         except Exception as e:
             logger.error("Error inesperado creando cliente %s: %s", id_cliente, e, exc_info=True)
@@ -63,7 +63,7 @@ class Cliente(EntidadBase):
             return True
 
         # Si ocurre un error en el proceso de validación, se registra el error en el log y lanza una excepción
-        except ErrorCliente:
+        except ErrorDominio:
             logger.warning(
                 "Error de validacion de datos del cliente %s con numero %s",
                 self.__nombre,
